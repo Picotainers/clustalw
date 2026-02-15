@@ -1,4 +1,4 @@
-name: Build and Publish Distroless clustalw
+name: Build and Publish clustalw
 
 on:
   push:

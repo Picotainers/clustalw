@@ -1,5 +1,5 @@
 # clustalw
-Small, distroless-when-possible container for `clustalw`.
+Small compatibility-focused container for `clustalw`.
 
 ## how to use
 ```bash
