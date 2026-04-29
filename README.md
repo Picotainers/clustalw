@@ -1,7 +1,12 @@
 # clustalw
-Small compatibility-focused container for `clustalw`.
+Source-built container for `clustalw`.
 
-## how to use
+## Quick Usage
+
 ```bash
-docker run --rm -v "$(pwd):/data" picotainers/clustalw:latest --help
+# Pull the image
+docker pull docker.io/picotainers/clustalw:latest
+
+# Run the tool
+docker run --rm docker.io/picotainers/clustalw:latest clustalw --help
 ```

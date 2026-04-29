@@ -1,34 +1,39 @@
 # syntax=docker/dockerfile:1
-# Compatibility-first template for clustalw.
-# Installs package from Bioconda and copies the full conda runtime to avoid missing libs/interpreters.
 
-FROM mambaorg/micromamba:2.0.5-debian12-slim AS builder
+FROM ubuntu:22.04 AS builder
 
-RUN micromamba install -y -n base -c conda-forge -c bioconda \
-    clustalw \
-    && micromamba clean --all --yes
+ARG DEBIAN_FRONTEND=noninteractive
+ARG CLUSTALW_VERSION=2.1
+ARG CLUSTALW_SHA256=e052059b87abfd8c9e695c280bfba86a65899138c82abccd5b00478a80f49486
 
-# Resolve a runnable command for this package.
-# Prefer exact match, then underscore variant, then prefix match.
-RUN set -eux; \
-    BIN=""; \
-    if [ -x "/opt/conda/bin/clustalw" ]; then BIN="/opt/conda/bin/clustalw"; fi; \
-    if [ -z "$BIN" ]; then CAND="/opt/conda/bin/$(echo clustalw | tr '-' '_')"; [ -x "$CAND" ] && BIN="$CAND" || true; fi; \
-    if [ -z "$BIN" ]; then BIN="$(find /opt/conda/bin -maxdepth 1 -type f -perm -111 -name 'clustalw*' | head -n1 || true)"; fi; \
-    test -n "$BIN"; \
-    printf '%s\n' "$BIN" > /tmp/tool-entry-path
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    build-essential \
+    autoconf \
+    automake \
+    libtool \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM mambaorg/micromamba:2.0.5-debian12-slim
+WORKDIR /tmp
+RUN wget -O clustalw.tar.gz "http://www.clustal.org/download/current/clustalw-${CLUSTALW_VERSION}.tar.gz" \
+    && echo "${CLUSTALW_SHA256}  clustalw.tar.gz" | sha256sum -c - \
+    && tar -xzf clustalw.tar.gz \
+    && cd "clustalw-${CLUSTALW_VERSION}" \
+    && ./configure --prefix=/usr/local \
+    && make -j"$(nproc)" \
+    && make install-strip \
+    && if [ -x /usr/local/bin/clustalw2 ] && [ ! -x /usr/local/bin/clustalw ]; then ln -s /usr/local/bin/clustalw2 /usr/local/bin/clustalw; fi
 
-COPY --from=builder /opt/conda /opt/conda
-COPY --from=builder /tmp/tool-entry-path /tmp/tool-entry-path
+FROM ubuntu:22.04
 
-USER root
-ENV PATH="/opt/conda/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/conda/lib:/opt/conda/lib64"
-RUN set -eux; \
-    BIN="$(cat /tmp/tool-entry-path)"; \
-    printf '#!/usr/bin/env bash\nexec "%s" "$@"\n' "$BIN" > /usr/local/bin/clustalw
-RUN chmod +x /usr/local/bin/clustalw && rm -f /tmp/tool-entry-path
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/bin/clustalw /usr/local/bin/clustalw
+COPY --from=builder /usr/local/bin/clustalw2 /usr/local/bin/clustalw2
+
 WORKDIR /data
-ENTRYPOINT ["/usr/local/bin/clustalw"]
+ENTRYPOINT ["clustalw"]
