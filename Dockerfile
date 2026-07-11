@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
-RUN wget -O clustalw.tar.gz "http://www.clustal.org/download/current/clustalw-${CLUSTALW_VERSION}.tar.gz" \
+RUN wget --no-check-certificate -O clustalw.tar.gz "https://www.clustal.org/download/current/clustalw-${CLUSTALW_VERSION}.tar.gz" \
     && echo "${CLUSTALW_SHA256}  clustalw.tar.gz" | sha256sum -c - \
     && tar -xzf clustalw.tar.gz \
     && cd "clustalw-${CLUSTALW_VERSION}" \
